@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  background-color: #f5f7fa;
+  color: #111827;
+}
+
+/* Simple utility classes shared across components */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-zoom text-white font-medium px-4 py-2 hover:bg-zoom-dark transition;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-white text-zoom border border-zoom/30 font-medium px-4 py-2 hover:bg-zoom-light transition;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-surface-muted text-gray-700 font-medium px-4 py-2 hover:bg-gray-200 transition;
+  }
+  .card {
+    @apply bg-white rounded-xl shadow-card border border-surface-border;
+  }
+  .input {
+    @apply w-full rounded-lg border border-surface-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zoom/40 focus:border-zoom;
+  }
+}
