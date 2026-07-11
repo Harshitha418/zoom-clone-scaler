@@ -9,7 +9,15 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./zoom_clone.db")
+
+def _default_database_url() -> str:
+    """Prefer a writable temp DB in hosted environments such as Railway."""
+    if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
+        return "sqlite:////tmp/zoom_clone.db"
+    return "sqlite:///./zoom_clone.db"
+
+
+DATABASE_URL = os.getenv("DATABASE_URL", _default_database_url())
 
 
 def _resolve_sqlite_database_path(database_url: str):
@@ -43,10 +51,27 @@ def create_engine_for_database_url(database_url: str):
                 fallback_path.parent.mkdir(parents=True, exist_ok=True)
                 database_url = f"sqlite:///{fallback_path}"
 
-    return create_engine(
+    engine = create_engine(
         database_url,
         connect_args={"check_same_thread": False} if database_url.startswith("sqlite") else {},
     )
+
+    if database_url.startswith("sqlite"):
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            return engine
+        except Exception:
+            fallback_path = Path("/tmp") / "zoom_clone.db"
+            fallback_path.parent.mkdir(parents=True, exist_ok=True)
+            fallback_url = f"sqlite:///{fallback_path}"
+            fallback_engine = create_engine(
+                fallback_url,
+                connect_args={"check_same_thread": False},
+            )
+            return fallback_engine
+
+    return engine
 
 
 # `check_same_thread` is required for SQLite when used with FastAPI's threadpool.

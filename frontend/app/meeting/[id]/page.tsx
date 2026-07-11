@@ -30,6 +30,7 @@ export default function MeetingRoomPage() {
   const [videoOff, setVideoOff] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
   const [selfParticipantId, setSelfParticipantId] = useState<number | null>(null);
+  const [hasSeenSelfInMeeting, setHasSeenSelfInMeeting] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [muteAllBusy, setMuteAllBusy] = useState(false);
   const registeredRef = useRef(false);
@@ -50,6 +51,12 @@ export default function MeetingRoomPage() {
   useEffect(() => {
     refreshMeeting();
   }, [refreshMeeting]);
+
+  useEffect(() => {
+    setHasSeenSelfInMeeting(false);
+    setSelfParticipantId(null);
+    registeredRef.current = false;
+  }, [meetingId]);
 
   // Register self as a participant once, remembering our participant id so we
   // can detect a host-initiated removal and detect a host-initiated mute.
@@ -89,11 +96,15 @@ export default function MeetingRoomPage() {
   useEffect(() => {
     if (!meeting || selfParticipantId == null) return;
     const stillIn = meeting.participants.some((p) => p.id === selfParticipantId);
-    if (!stillIn && registeredRef.current) {
+    if (stillIn) {
+      setHasSeenSelfInMeeting(true);
+      return;
+    }
+    if (hasSeenSelfInMeeting && registeredRef.current) {
       alert("You were removed from the meeting by the host.");
       router.push("/");
     }
-  }, [meeting, selfParticipantId, router]);
+  }, [meeting, selfParticipantId, router, hasSeenSelfInMeeting]);
 
   function handleCopy() {
     if (!meeting) return;

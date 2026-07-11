@@ -1,7 +1,7 @@
 /** Thin fetch wrapper. Uses NEXT_PUBLIC_API_URL so we can deploy without code changes. */
 import type { AuthResponse, Meeting, Participant, User } from "./types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const BASE = (process.env.NEXT_PUBLIC_API_URL || "/api").replace(/\/$/, "");
 
 const TOKEN_KEY = "zoom_clone_token";
 
