@@ -12,16 +12,36 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./zoom_clone.db")
 
 
+def _resolve_sqlite_database_path(database_url: str):
+    """Return a writable SQLite file path, falling back to /tmp when needed."""
+    if not database_url.startswith("sqlite"):
+        return None
+
+    url = make_url(database_url)
+    database = url.database
+    if not database or database in {"", ":memory:"}:
+        return None
+
+    database_path = Path(database)
+    if not database_path.is_absolute():
+        database_path = Path(os.path.abspath(database))
+
+    return database_path
+
+
 def create_engine_for_database_url(database_url: str):
     """Create a SQLAlchemy engine and ensure SQLite parent directories exist."""
     if database_url.startswith("sqlite"):
-        url = make_url(database_url)
-        database = url.database
-        if database and database not in {"", ":memory:"}:
-            database_path = Path(database)
-            if not database_path.is_absolute():
-                database_path = Path(os.path.abspath(database))
-            database_path.parent.mkdir(parents=True, exist_ok=True)
+        database_path = _resolve_sqlite_database_path(database_url)
+        if database_path is not None:
+            try:
+                database_path.parent.mkdir(parents=True, exist_ok=True)
+                if not database_path.exists():
+                    database_path.touch(exist_ok=True)
+            except OSError:
+                fallback_path = Path("/tmp") / "zoom_clone.db"
+                fallback_path.parent.mkdir(parents=True, exist_ok=True)
+                database_url = f"sqlite:///{fallback_path}"
 
     return create_engine(
         database_url,
