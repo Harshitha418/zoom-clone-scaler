@@ -99,10 +99,24 @@ def get_meeting(meeting_id: str, db: Session = Depends(get_db)):
 @router.post("/{meeting_id}/join", response_model=ParticipantOut, status_code=201)
 def join_meeting(meeting_id: str, payload: JoinMeetingIn, db: Session = Depends(get_db)):
     meeting = _get_meeting_or_404(db, meeting_id)
-    participant = Participant(display_name=payload.display_name, meeting_id=meeting.id)
-    db.add(participant)
-    db.commit()
-    db.refresh(participant)
+
+    participant = (
+        db.query(Participant)
+        .filter(
+            Participant.meeting_id == meeting.id,
+            Participant.display_name == payload.display_name.strip(),
+        )
+        .first()
+    )
+    if participant is None:
+        participant = Participant(
+            display_name=payload.display_name.strip(),
+            meeting_id=meeting.id,
+        )
+        db.add(participant)
+        db.commit()
+        db.refresh(participant)
+
     return participant
 
 
