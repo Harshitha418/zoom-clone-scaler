@@ -3,16 +3,34 @@
 We keep this tiny and centralized so routers/services just call `get_db`.
 """
 import os
+from pathlib import Path
+
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./zoom_clone.db")
 
+
+def create_engine_for_database_url(database_url: str):
+    """Create a SQLAlchemy engine and ensure SQLite parent directories exist."""
+    if database_url.startswith("sqlite"):
+        url = make_url(database_url)
+        database = url.database
+        if database and database not in {"", ":memory:"}:
+            database_path = Path(database)
+            if not database_path.is_absolute():
+                database_path = Path(os.path.abspath(database))
+            database_path.parent.mkdir(parents=True, exist_ok=True)
+
+    return create_engine(
+        database_url,
+        connect_args={"check_same_thread": False} if database_url.startswith("sqlite") else {},
+    )
+
+
 # `check_same_thread` is required for SQLite when used with FastAPI's threadpool.
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
-)
+engine = create_engine_for_database_url(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
